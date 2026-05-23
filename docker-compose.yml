@@ -20,7 +20,8 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: zarvix-backend
     restart: unless-stopped
     depends_on:
@@ -32,16 +33,8 @@ services:
       DATABASE_URL:   postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-zarvix}?sslmode=disable
       JWT_SECRET:     ${JWT_SECRET:?La variable JWT_SECRET es obligatoria}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?La variable ADMIN_PASSWORD es obligatoria}
-
-  frontend:
-    build:
-      context: ./frontend
-    container_name: zarvix-frontend
-    restart: unless-stopped
-    depends_on:
-      - backend
     ports:
-      - "80:80"
+      - "3000:3000"
 
 volumes:
   postgres_data:
