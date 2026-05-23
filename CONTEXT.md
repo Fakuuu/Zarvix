@@ -487,3 +487,45 @@ Alpine usa musl libc y no incluye OpenSSL por defecto. Prisma necesita detectar 
 ### Estado actual del proyecto
 - **Proyecto completo y en GitHub** (`https://github.com/Fakuuu/Zarvix`, rama `main`)
 - Al redesplegar en Easypanel: Prisma aplicará la migración y las tablas se crearán automáticamente
+
+---
+
+## [Sesión 1] Fix: backend sirve el frontend (arquitectura unificada)
+
+### Problema
+`Cannot GET /` — Express no sabía servir `/`. El frontend (nginx) era un contenedor separado al que Easypanel no enrutaba el tráfico.
+
+### Solución
+El backend Express sirve ahora los ficheros estáticos del build del frontend.
+
+### Por qué `COPY ../frontend` requería cambiar el contexto
+Docker no permite salir del build context con `../`. El contexto era `./backend`, así que `../frontend` fallaba. Solución: cambiar el contexto a `.` (raíz del proyecto) y ajustar todas las rutas `COPY` en consecuencia.
+
+### Estructura en el contenedor
+```
+/app/
+  backend/
+    src/index.js   ← __dirname = /app/backend/src
+    node_modules/
+    prisma/
+  frontend/
+    dist/          ← path.join(__dirname, '../../frontend/dist') ✓
+```
+
+### Cambios en `index.js`
+- Import de `path` y `fileURLToPath` para `__dirname` en ES modules
+- `app.use(express.static(...))` antes del `app.listen`
+- `app.get('*', ...)` catch-all SPA — devuelve `index.html` para cualquier ruta no-API
+
+### Ficheros modificados
+| Fichero | Acción |
+|---|---|
+| `/backend/src/index.js` | Añadido serving estático + catch-all SPA |
+| `/backend/Dockerfile` | Contexto raíz, estructura `/app/backend/` + `/app/frontend/`, CMD con `cd /app/backend` |
+| `/docker-compose.yml` | `context: .` + `dockerfile: backend/Dockerfile`, puerto 3000 expuesto, servicio `frontend` eliminado |
+| `/.dockerignore` | Creado — excluye node_modules y dist de ambas carpetas |
+
+### Estado actual del proyecto
+- Un solo contenedor de app sirve API + frontend estático
+- Easypanel debe apuntar al servicio `backend` en el puerto 3000
+- Commit `96e6ab3` en GitHub
