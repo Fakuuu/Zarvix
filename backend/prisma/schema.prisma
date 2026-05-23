@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Empleado {
+  id        Int       @id @default(autoincrement())
+  nombre    String
+  activo    Boolean   @default(true)
+  creado_en DateTime  @default(now())
+  horarios  Horario[]
+}
+
+model Horario {
+  id          Int      @id @default(autoincrement())
+  empleadoId  Int
+  fecha       DateTime @db.Date
+  turnoNum    Int
+  horaEntrada String
+  horaSalida  String
+  notas       String?
+  creado_en   DateTime @default(now())
+
+  empleado Empleado @relation(fields: [empleadoId], references: [id])
+
+  @@unique([empleadoId, fecha, turnoNum])
+}
