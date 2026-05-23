@@ -1,6 +1,9 @@
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
+
+# OpenSSL requerido por Prisma en Debian/slim (no incluido por defecto)
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 # Instalar dependencias de producción (prisma incluido para migraciones en runtime)
 COPY package*.json ./
