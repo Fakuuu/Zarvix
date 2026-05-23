@@ -18,5 +18,5 @@ COPY src ./src
 
 EXPOSE 3000
 
-# Ejecutar migraciones + seed + servidor al arrancar el contenedor
-CMD ["sh", "-c", "npx prisma migrate deploy && node prisma/seed.js && node src/index.js"]
+# Ejecutar migraciones y arrancar el servidor
+CMD ["sh", "-c", "npx prisma migrate deploy && node src/index.js"]
