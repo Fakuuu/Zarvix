@@ -442,3 +442,48 @@ El frontend se construye sin `VITE_API_URL` (undefined → peticiones relativas)
 ### Estado actual del proyecto
 - **El proyecto está completo y listo para despliegue**
 - Falta únicamente: crear la migración inicial y hacer push del código a Easypanel
+
+---
+
+## [Sesión 1] Fix Dockerfile backend — OpenSSL para Prisma en Easypanel
+
+### Qué se ha implementado
+- Imagen base cambiada de `node:20-alpine` a `node:20-slim` (Debian)
+- Añadido `RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*` antes de instalar dependencias
+- Commit y push a GitHub (`0fefdff`)
+
+### Por qué
+Alpine usa musl libc y no incluye OpenSSL por defecto. Prisma necesita detectar la versión de libssl del sistema para cargar el query engine correcto. En Alpine falla con "failed to detect libssl/openssl version". Debian slim sí incluye la libc estándar; añadir `openssl` explícitamente garantiza compatibilidad.
+
+### Ficheros modificados
+| Fichero | Acción |
+|---|---|
+| `/backend/Dockerfile` | `FROM node:20-slim` + `apt-get install openssl` |
+
+### Estado actual del proyecto
+- Código en GitHub: `https://github.com/Fakuuu/Zarvix` (rama `main`)
+- Pendiente: migración inicial de Prisma en Easypanel
+
+---
+
+## [Sesión 1] Fix: migración inicial + CMD del backend
+
+### Qué se ha implementado
+- `CMD` del backend simplificado a `npx prisma migrate deploy && node src/index.js` (sin seed)
+- Creados los ficheros de migración inicial que `prisma migrate deploy` necesita:
+  - `prisma/migrations/migration_lock.toml` — declara el provider postgresql
+  - `prisma/migrations/20260523000000_init/migration.sql` — crea tablas `Empleado` y `Horario` con índice único y FK
+
+### Por qué
+`prisma migrate deploy` solo aplica migraciones existentes — no las crea. Sin el directorio `migrations/` con al menos un fichero SQL, falla con "No migration found". La migración se ha generado manualmente a partir del schema.
+
+### Ficheros modificados
+| Fichero | Acción |
+|---|---|
+| `/backend/Dockerfile` | CMD: `migrate deploy && node src/index.js` |
+| `/backend/prisma/migrations/migration_lock.toml` | Creado |
+| `/backend/prisma/migrations/20260523000000_init/migration.sql` | Creado — SQL completo de las dos tablas |
+
+### Estado actual del proyecto
+- **Proyecto completo y en GitHub** (`https://github.com/Fakuuu/Zarvix`, rama `main`)
+- Al redesplegar en Easypanel: Prisma aplicará la migración y las tablas se crearán automáticamente
