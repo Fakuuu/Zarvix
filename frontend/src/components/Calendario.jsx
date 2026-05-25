@@ -34,6 +34,11 @@ function padDos(n) {
   return String(n).padStart(2, '0');
 }
 
+// "HH:MM" → 'Mañana' si antes de las 12, 'Tarde' si a partir de las 12
+function etiquetaTurno(horaEntrada) {
+  return parseInt(horaEntrada.split(':')[0], 10) < 12 ? 'Mañana' : 'Tarde';
+}
+
 export default function Calendario({ empleadoId, anyo, mes, isAdmin, onTurnoClick, reloadKey }) {
   // { 'YYYY-MM-DD': { 1: turnoObj, 2: turnoObj } }
   const [horarios, setHorarios]   = useState({});
@@ -186,9 +191,14 @@ export default function Calendario({ empleadoId, anyo, mes, isAdmin, onTurnoClic
                     isAdmin ? 'cursor-pointer hover:bg-green-200 active:opacity-70' : '',
                   ].join(' ')}
                 >
-                  <span className="font-semibold text-green-800">
-                    {turno1.horaEntrada} – {turno1.horaSalida}
-                  </span>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-semibold text-green-800">
+                      {turno1.horaEntrada} – {turno1.horaSalida}
+                    </span>
+                    <span className="text-[10px] font-medium text-green-700 opacity-70 shrink-0">
+                      {etiquetaTurno(turno1.horaEntrada)}
+                    </span>
+                  </div>
                   {turno1.notas && (
                     <p className="text-green-700 mt-0.5 truncate">{turno1.notas}</p>
                   )}
@@ -214,9 +224,14 @@ export default function Calendario({ empleadoId, anyo, mes, isAdmin, onTurnoClic
                     isAdmin ? 'cursor-pointer hover:bg-blue-200 active:opacity-70' : '',
                   ].join(' ')}
                 >
-                  <span className="font-semibold text-blue-800">
-                    {turno2.horaEntrada} – {turno2.horaSalida}
-                  </span>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-semibold text-blue-800">
+                      {turno2.horaEntrada} – {turno2.horaSalida}
+                    </span>
+                    <span className="text-[10px] font-medium text-blue-700 opacity-70 shrink-0">
+                      {etiquetaTurno(turno2.horaEntrada)}
+                    </span>
+                  </div>
                   {turno2.notas && (
                     <p className="text-blue-700 mt-0.5 truncate">{turno2.notas}</p>
                   )}
