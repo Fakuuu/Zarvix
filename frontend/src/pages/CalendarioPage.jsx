@@ -5,6 +5,7 @@ import SelectorEmpleado from '../components/SelectorEmpleado';
 import SelectorMes from '../components/SelectorMes';
 import Calendario from '../components/Calendario';
 import TurnoModal from '../components/TurnoModal';
+import NuevoEmpleadoModal from '../components/NuevoEmpleadoModal';
 
 function mesYanyoActual() {
   const hoy = new Date();
@@ -18,10 +19,14 @@ export default function CalendarioPage() {
   const [empleadoId,  setEmpleadoId]  = useState(null);
   const [anyo,        setAnyo]        = useState(anyoInicial);
   const [mes,         setMes]         = useState(mesInicial);
-  const [reloadKey,   setReloadKey]   = useState(0);
+  const [reloadKey,          setReloadKey]          = useState(0);
+  const [empleadosReloadKey, setEmpleadosReloadKey] = useState(0);
 
-  // Estado del modal
+  // Estado del modal de turno
   const [modalAbierto,   setModalAbierto]   = useState(false);
+
+  // Estado del modal de nuevo empleado
+  const [modalEmpleadoAbierto, setModalEmpleadoAbierto] = useState(false);
   const [turnoModal,     setTurnoModal]     = useState({
     fecha: '',
     turnoNum: 1,
@@ -62,10 +67,22 @@ export default function CalendarioPage() {
 
         {/* Barra de controles */}
         <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-xl border border-gray-200 px-4 py-3 shadow-sm">
-          <SelectorEmpleado
-            empleadoId={empleadoId}
-            onEmpleadoChange={setEmpleadoId}
-          />
+          <div className="flex items-center gap-3">
+            <SelectorEmpleado
+              empleadoId={empleadoId}
+              onEmpleadoChange={setEmpleadoId}
+              reloadKey={empleadosReloadKey}
+            />
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setModalEmpleadoAbierto(true)}
+                className="px-3 py-1.5 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700 whitespace-nowrap"
+              >
+                + Nuevo empleado
+              </button>
+            )}
+          </div>
           <SelectorMes
             anyo={anyo}
             mes={mes}
@@ -98,6 +115,15 @@ export default function CalendarioPage() {
           fecha={turnoModal.fecha}
           turnoNum={turnoModal.turnoNum}
           empleadoId={empleadoId}
+        />
+      )}
+
+      {/* Modal de nuevo empleado */}
+      {isAdmin && (
+        <NuevoEmpleadoModal
+          isOpen={modalEmpleadoAbierto}
+          onClose={() => setModalEmpleadoAbierto(false)}
+          onCreado={() => setEmpleadosReloadKey((k) => k + 1)}
         />
       )}
     </div>

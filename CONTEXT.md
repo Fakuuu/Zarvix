@@ -529,3 +529,29 @@ Docker no permite salir del build context con `../`. El contexto era `./backend`
 - Un solo contenedor de app sirve API + frontend estático
 - Easypanel debe apuntar al servicio `backend` en el puerto 3000
 - Commit `96e6ab3` en GitHub
+
+---
+
+## [Sesión 2] Botón "Nuevo empleado" en vista admin
+
+### Qué se ha implementado
+- **Botón "+ Nuevo empleado"** en la barra de controles de `CalendarioPage`, visible únicamente cuando `isAdmin` es `true`
+- **`NuevoEmpleadoModal`**: modal con campo de texto para el nombre, botones Cancelar/Guardar, indicador de estado "Guardando…" y error inline
+  - Llama a `POST /api/empleados` con `{ nombre }` (ruta ya protegida por `verifyToken`)
+  - Al guardar con éxito: invoca `onCreado()` + `onClose()`
+  - Cierre al clic en el overlay exterior
+- **`SelectorEmpleado`**: acepta nueva prop `reloadKey` (default 0) — cuando cambia, el `useEffect` vuelve a llamar a `GET /api/empleados` y autoselecciona el primer empleado si no hay ninguno elegido
+- **`CalendarioPage`**: estado `empleadosReloadKey` que se incrementa al crear un empleado, propagado a `SelectorEmpleado` como `reloadKey`
+- Build verificado: 86 módulos, CSS 14.06 kB, sin errores
+
+### Ficheros creados o modificados
+| Fichero | Acción |
+|---|---|
+| `/frontend/src/components/NuevoEmpleadoModal.jsx` | Creado — modal de creación de empleado |
+| `/frontend/src/components/SelectorEmpleado.jsx` | Modificado — prop `reloadKey` + re-fetch en efecto |
+| `/frontend/src/pages/CalendarioPage.jsx` | Modificado — botón, estado `empleadosReloadKey`, monta `NuevoEmpleadoModal` |
+
+### Estado actual del proyecto
+- Frontend: 100% funcional — flujo de creación de empleados operativo desde la vista admin
+- Backend: `POST /api/empleados` ya existía y protegido con JWT
+- Docker / Deploy: sin cambios

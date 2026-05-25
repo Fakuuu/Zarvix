@@ -1,25 +1,25 @@
 import { useState, useEffect } from 'react';
 import client from '../api/client';
 
-export default function SelectorEmpleado({ empleadoId, onEmpleadoChange }) {
+export default function SelectorEmpleado({ empleadoId, onEmpleadoChange, reloadKey = 0 }) {
   const [empleados, setEmpleados] = useState([]);
   const [cargando,  setCargando]  = useState(true);
   const [error,     setError]     = useState(null);
 
   useEffect(() => {
+    setCargando(true);
+    setError(null);
     client.get('/api/empleados')
       .then(({ data }) => {
         setEmpleados(data);
-        // Selecciona el primero automáticamente si no hay ninguno elegido
         if (data.length > 0 && !empleadoId) {
           onEmpleadoChange(data[0].id);
         }
       })
       .catch(() => setError('No se pudieron cargar los empleados.'))
       .finally(() => setCargando(false));
-  // Solo al montar; el padre controla empleadoId después
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [reloadKey]);
 
   if (cargando) {
     return (
