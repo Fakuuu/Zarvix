@@ -532,6 +532,35 @@ Docker no permite salir del build context con `../`. El contexto era `./backend`
 
 ---
 
+## [Sesión 2] Vista principal — rediseño mobile-first con navegación por días
+
+### Qué se ha implementado
+- **Vista de un solo día** en lugar del calendario mensual como vista principal
+- Al entrar, muestra directamente el día de hoy (`new Date()`)
+- **`TurnoCard`** (subcomponente inline): tarjeta visual para cada turno con hora grande (3xl), duración, etiqueta Mañana/Tarde, notas y lápiz de edición en modo admin; verde para turno 1, azul para turno 2
+- **Navegación por días**: flechas `<` y `>` + swipe táctil horizontal; límite en el primer y último día del mes
+  - Swipe solo activo si el gesto es más horizontal que vertical (ratio 1.5:1) para no interferir con el scroll
+- **Indicador de mes** centrado (`< Mayo 2026 >`) con flechas para cambiar de mes; al cambiar mes, el día salta a hoy (si es el mes actual) o al día 1
+- **Animación slide** con keyframes CSS (`slideInFromRight` / `slideInFromLeft`, 0.18s ease-out) usando `key={animVersion}` para forzar reentrada
+- **Mensaje "Sin turno registrado"** con botón "+ Añadir turno" cuando el día está vacío; botón "+ Añadir turno 2" cuando solo existe turno 1
+- **Botón flotante `+`** (`fixed bottom-[4.5rem] right-4`): muestra `+` si el día está vacío o lápiz si ya hay turno 1; solo visible en admin con empleado seleccionado
+- **Barra de resumen fija** (`fixed bottom-0`): `Hechas: Xh · Total mes: Xh · Pendientes: Xh`; "hechas" = turnos con fecha ≤ hoy; se calcula en cada render desde `horarios` del mes ya cargado
+- **Hoy resaltado**: borde verde en el navegador de día + texto verde + chip "· Hoy"; fines de semana en índigo
+- Esqueletos de carga animados mientras se obtiene el mes
+- Build verificado: CSS 20.70 kB, sin errores
+
+### Ficheros creados o modificados
+| Fichero | Acción |
+|---|---|
+| `/frontend/src/pages/CalendarioPage.jsx` | Reescrito — nuevo diseño completo; elimina uso de `Calendario.jsx` y `SelectorMes.jsx` |
+| `/frontend/src/index.css` | Añadidos keyframes `slideInFromRight` / `slideInFromLeft` y clases `.slide-in-right` / `.slide-in-left` |
+
+### Estado actual del proyecto
+- Frontend: vista principal mobile-first operativa; `Calendario.jsx` y `SelectorMes.jsx` se conservan pero ya no se usan en la página principal
+- Backend / Docker / Deploy: sin cambios
+
+---
+
 ## [Sesión 2] TurnoModal — rediseño con cuadrícula visual de horas
 
 ### Qué se ha implementado
