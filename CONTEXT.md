@@ -532,6 +532,22 @@ Docker no permite salir del build context con `../`. El contexto era `./backend`
 
 ---
 
+## [Sesión 2] Seed de horarios de Ainhoa (mayo–junio 2026)
+
+### Qué se hizo
+- Script `prisma/seed-ainhoa.js` (temporal): eliminó los 5 horarios existentes del empleado "Ainhoa" (id: 1) e insertó 22 turnos para las semanas 25/05–14/06/2026
+- Ejecutado manualmente desde la consola de Easypanel (`node backend/prisma/seed-ainhoa.js`)
+- Eliminado del repositorio tras ejecución exitosa (`2e0d8b6`)
+
+### Resumen de datos cargados
+| Semana | Días con turno | Días libres |
+|---|---|---|
+| 25/05–31/05 | Lun–Sáb (Sáb con jornada partida) | Dom 31/05 |
+| 01/06–07/06 | Lun–Sáb (Lun, Mar y Sáb con jornada partida) | Dom 07/06 |
+| 08/06–14/06 | Lun, Mar, Mié (jornada partida), Vie, Sáb | Jue 11/06, Dom 14/06 |
+
+---
+
 ## [Sesión 2] Exportar turnos como mensaje WhatsApp (semana / mes)
 
 ### Qué se ha implementado
