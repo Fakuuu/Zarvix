@@ -532,6 +532,22 @@ Docker no permite salir del build context con `../`. El contexto era `./backend`
 
 ---
 
+## [Sesión 2] Iconos PWA — reemplazo de placeholders
+
+### Qué se hizo
+- Generados dos iconos PNG reales en sustitución de los placeholders verdes sólidos
+- Diseño: fondo negro `#0D1117` con esquinas redondeadas, letra "Z" en verde `#1D9E75`, fuente Arial Black 900 weight, centrada
+- Herramienta: sharp (instalado en directorio temporal, borrado tras el uso) convirtiendo SVG a PNG
+- Tamaños: 192×192 (2.9 KB) y 512×512 (12 KB)
+
+### Ficheros modificados
+| Fichero | Acción |
+|---|---|
+| `/frontend/public/icons/icon-192x192.png` | Reemplazado — icono real Zarvix |
+| `/frontend/public/icons/icon-512x512.png` | Reemplazado — icono real Zarvix |
+
+---
+
 ## [Sesión 2] Seed de horarios de Ainhoa (mayo–junio 2026)
 
 ### Qué se hizo
