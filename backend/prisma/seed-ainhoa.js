@@ -40,11 +40,11 @@ const HORARIOS = [
 async function main() {
   // Buscar empleado sin distinción de mayúsculas
   const emp = await prisma.empleado.findFirst({
-    where: { nombre: { equals: 'Ainhoa Vaz', mode: 'insensitive' } },
+    where: { nombre: { equals: 'Ainhoa', mode: 'insensitive' } },
   });
 
   if (!emp) {
-    console.error('Error: no se encontró ningún empleado con nombre "Ainhoa Vaz".');
+    console.error('Error: no se encontró ningún empleado con nombre "Ainhoa".');
     process.exit(1);
   }
 
