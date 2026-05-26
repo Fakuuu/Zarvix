@@ -31,6 +31,7 @@ export default function CalendarioPage() {
     fecha: '',
     turnoNum: 1,
     turnoExistente: null,
+    turnosDelDia: null,
   });
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
@@ -41,8 +42,8 @@ export default function CalendarioPage() {
   }
 
   // Recibe fecha (YYYY-MM-DD), turnoNum y el objeto de turno existente (o null)
-  function handleTurnoClick(fecha, turnoNum, turnoExistente) {
-    setTurnoModal({ fecha, turnoNum, turnoExistente });
+  function handleTurnoClick(fecha, turnoNum, turnoExistente, turnosDelDia = null) {
+    setTurnoModal({ fecha, turnoNum, turnoExistente, turnosDelDia });
     setModalAbierto(true);
   }
 
@@ -112,6 +113,7 @@ export default function CalendarioPage() {
           onSave={handleSave}
           onDelete={handleDelete}
           turnoExistente={turnoModal.turnoExistente}
+          turnosDelDia={turnoModal.turnosDelDia}
           fecha={turnoModal.fecha}
           turnoNum={turnoModal.turnoNum}
           empleadoId={empleadoId}

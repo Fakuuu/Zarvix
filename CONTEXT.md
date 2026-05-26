@@ -532,6 +532,35 @@ Docker no permite salir del build context con `../`. El contexto era `./backend`
 
 ---
 
+## [Sesión 2] TurnoModal — rediseño con cuadrícula visual de horas
+
+### Qué se ha implementado
+- **Cuadrícula de botones** de 08:00 a 22:00 en intervalos de 30 min (29 slots, grid de 5 columnas)
+- **Lógica de selección en dos toques**: primer toque → entrada (verde), segundo toque → salida (verde oscuro); horas intermedias coloreadas en verde claro (rango). Tocar una hora ≤ entrada reinicia la selección.
+- **Preview en tiempo real** bajo la cuadrícula: `"09:00 → 14:00 · 5h"`
+- **HintBadge** guía al usuario: `"Toca la hora de entrada"` / `"Ahora toca la hora de salida"` / `"✓ Turno 1 completo"`
+- **Toggle "Jornada partida"**: activa una segunda cuadrícula idéntica en azul (Turno 2), misma lógica de selección
+- **Botón "Borrar"** por turno (inline junto al título) para resetear la selección del grid
+- **Notas** compartidas (textarea opcional) debajo de ambos turnos
+- **Validación inline**: turno 1 obligatorio (si no hay uno ya guardado); turno 2 obligatorio si toggle activo; error en turno parcial (entrada sin salida o viceversa)
+- **Edición completa del día**: el modal recibe `turnosDelDia = { 1, 2 }` y pre-rellena ambas cuadrículas; al abrir desde turno 2 se activa el toggle y se muestra también turno 1 ya existente
+- **Diseño bottom-sheet en móvil**: aparece desde abajo con esquinas redondeadas superiores; desplazable internamente; botones de 40px de altura cómodos para toque con el dedo
+- **Eliminar turno** del servidor: botón con doble confirmación (misma UX que antes)
+- Build verificado: CSS 17.56 kB, sin errores
+
+### Ficheros creados o modificados
+| Fichero | Acción |
+|---|---|
+| `/frontend/src/components/TurnoModal.jsx` | Reescrito — nuevo diseño visual completo |
+| `/frontend/src/components/Calendario.jsx` | Modificado — pasa `turnosDelDia` (contexto completo del día) en todos los clicks |
+| `/frontend/src/pages/CalendarioPage.jsx` | Modificado — almacena y propaga `turnosDelDia` al modal |
+
+### Estado actual del proyecto
+- Frontend: TurnoModal rediseñado con UX visual para móvil; resto de componentes sin cambios
+- Backend / Docker / Deploy: sin cambios
+
+---
+
 ## [Sesión 2] Botón "Nuevo empleado" en vista admin
 
 ### Qué se ha implementado

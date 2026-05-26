@@ -184,8 +184,8 @@ export default function Calendario({ empleadoId, anyo, mes, isAdmin, onTurnoClic
                 <div
                   role={isAdmin ? 'button' : undefined}
                   tabIndex={isAdmin ? 0 : undefined}
-                  onClick={() => isAdmin && onTurnoClick(key, 1, turno1)}
-                  onKeyDown={(e) => isAdmin && e.key === 'Enter' && onTurnoClick(key, 1, turno1)}
+                  onClick={() => isAdmin && onTurnoClick(key, 1, turno1, { 1: turno1, 2: turno2 ?? null })}
+                  onKeyDown={(e) => isAdmin && e.key === 'Enter' && onTurnoClick(key, 1, turno1, { 1: turno1, 2: turno2 ?? null })}
                   className={[
                     'rounded px-2 py-1 text-xs bg-green-100 border border-green-300',
                     isAdmin ? 'cursor-pointer hover:bg-green-200 active:opacity-70' : '',
@@ -205,7 +205,7 @@ export default function Calendario({ empleadoId, anyo, mes, isAdmin, onTurnoClic
                 </div>
               ) : isAdmin ? (
                 <button
-                  onClick={() => onTurnoClick(key, 1, null)}
+                  onClick={() => onTurnoClick(key, 1, null, { 1: null, 2: turno2 ?? null })}
                   className="text-xs text-green-500 hover:text-green-700 hover:bg-green-50 rounded px-1 py-0.5 text-left border border-dashed border-green-300 transition-colors"
                 >
                   + Turno 1
@@ -217,8 +217,8 @@ export default function Calendario({ empleadoId, anyo, mes, isAdmin, onTurnoClic
                 <div
                   role={isAdmin ? 'button' : undefined}
                   tabIndex={isAdmin ? 0 : undefined}
-                  onClick={() => isAdmin && onTurnoClick(key, 2, turno2)}
-                  onKeyDown={(e) => isAdmin && e.key === 'Enter' && onTurnoClick(key, 2, turno2)}
+                  onClick={() => isAdmin && onTurnoClick(key, 2, turno2, { 1: turno1 ?? null, 2: turno2 })}
+                  onKeyDown={(e) => isAdmin && e.key === 'Enter' && onTurnoClick(key, 2, turno2, { 1: turno1 ?? null, 2: turno2 })}
                   className={[
                     'rounded px-2 py-1 text-xs bg-blue-100 border border-blue-300',
                     isAdmin ? 'cursor-pointer hover:bg-blue-200 active:opacity-70' : '',
@@ -238,7 +238,7 @@ export default function Calendario({ empleadoId, anyo, mes, isAdmin, onTurnoClic
                 </div>
               ) : isAdmin && turno1 ? (
                 <button
-                  onClick={() => onTurnoClick(key, 2, null)}
+                  onClick={() => onTurnoClick(key, 2, null, { 1: turno1 ?? null, 2: null })}
                   className="text-xs text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded px-1 py-0.5 text-left border border-dashed border-blue-300 transition-colors"
                 >
                   + Turno 2
