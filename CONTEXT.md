@@ -532,6 +532,40 @@ Docker no permite salir del build context con `../`. El contexto era `./backend`
 
 ---
 
+## [Sesión 2] Exportar turnos como mensaje WhatsApp (semana / mes)
+
+### Qué se ha implementado
+- **Botón "Exportar" con dropdown** en la barra de empleado; visible cuando hay empleado seleccionado; dos opciones: "Esta semana" y "Este mes"
+- Overlay invisible cierra el dropdown al hacer clic fuera
+
+**Lógica de generación:**
+- Helpers compartidos: `lunesDeHoy()`, `semanaDesdeLunes()`, `formatDiaExport()`, `bloquesSemana()`
+- `generarMensajeSemana(horarios)` → genera un único bloque (la semana actual)
+- `generarMensajeMes(horarios, anyo, mes)` → genera desde el lunes de la semana actual hasta el domingo de la última semana que contenga días del mes visto; semanas separadas por línea en blanco
+  - El último domingo puede ser del mes siguiente (se completa la semana)
+  - Los días sin data en `horarios` aparecen como `*LIBRE*` / `*FIESTA*`
+
+**Formato del mensaje:**
+- Cabecera semanal: `*25/05-31/05*`
+- Turno simple: `Lunes: 17:00-21:00`
+- Jornada partida: `Sábado: 10:30-13:30 a 15:00-20:30`
+- Sin turno: `Lunes: *LIBRE*` / `Domingo: *FIESTA*`
+- Notas internas NO incluidas
+
+- **`ExportModal`**: bottom-sheet desplazable, título dinámico ("Exportar semana" / "Exportar mes"), `<pre select-all>`, botón "Copiar" con `navigator.clipboard.writeText` → "✓ Copiado" 2s
+- Build verificado: CSS 21.54 kB, sin errores
+
+### Ficheros modificados
+| Fichero | Acción |
+|---|---|
+| `/frontend/src/pages/CalendarioPage.jsx` | Añadido bloque exportación completo: helpers, `ExportModal`, dropdown, estado `exportData`/`exportMenuAbierto`, handler `handleExportar(tipo)` |
+
+### Estado actual del proyecto
+- Frontend: exportación semana/mes operativa; todos los componentes funcionales
+- Backend / Docker / Deploy: sin cambios
+
+---
+
 ## [Sesión 2] Vista principal — rediseño mobile-first con navegación por días
 
 ### Qué se ha implementado

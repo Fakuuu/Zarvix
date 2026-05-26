@@ -31,6 +31,147 @@ function fmtHoras(min) {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
+// ── Exportar ─────────────────────────────────────────────────────────────────
+
+const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+function lunesDeHoy() {
+  const hoy = new Date();
+  const dow = hoy.getDay();
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() - (dow === 0 ? 6 : dow - 1));
+  lunes.setHours(0, 0, 0, 0);
+  return lunes;
+}
+
+function semanaDesdeLunes(lunes) {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(lunes);
+    d.setDate(lunes.getDate() + i);
+    return d;
+  });
+}
+
+function formatDiaExport(d, idxSemana, horarios) {
+  const nombre = DIAS_SEMANA[idxSemana];
+  const key    = toKey(d.getFullYear(), d.getMonth() + 1, d.getDate());
+  const t1     = horarios[key]?.[1] ?? null;
+  const t2     = horarios[key]?.[2] ?? null;
+
+  if (!t1 && !t2) return `${nombre}: ${idxSemana === 6 ? '*FIESTA*' : '*LIBRE*'}`;
+
+  const e1 = String(t1.horaEntrada).slice(0, 5);
+  const s1 = String(t1.horaSalida).slice(0, 5);
+  if (t2) {
+    const e2 = String(t2.horaEntrada).slice(0, 5);
+    const s2 = String(t2.horaSalida).slice(0, 5);
+    return `${nombre}: ${e1}-${s1} a ${e2}-${s2}`;
+  }
+  return `${nombre}: ${e1}-${s1}`;
+}
+
+function bloquesSemana(semanas, horarios) {
+  const fd = (d) => `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
+  return semanas.map((dias) => {
+    const cabecera = `*${fd(dias[0])}-${fd(dias[6])}*`;
+    const lineas   = dias.map((d, i) => formatDiaExport(d, i, horarios));
+    return [cabecera, ...lineas].join('\n');
+  });
+}
+
+function generarMensajeSemana(horarios) {
+  return bloquesSemana([semanaDesdeLunes(lunesDeHoy())], horarios)[0];
+}
+
+function generarMensajeMes(horarios, anyo, mes) {
+  // Último día del mes → domingo de esa semana = límite final
+  const ultimoDia = new Date(anyo, mes, 0);
+  const dowUlt    = ultimoDia.getDay();
+  const ultimoDom = new Date(ultimoDia);
+  ultimoDom.setDate(ultimoDia.getDate() + (dowUlt === 0 ? 0 : 7 - dowUlt));
+  ultimoDom.setHours(0, 0, 0, 0);
+
+  const semanas = [];
+  let lunes = lunesDeHoy();
+  while (lunes <= ultimoDom) {
+    semanas.push(semanaDesdeLunes(lunes));
+    const siguiente = new Date(lunes);
+    siguiente.setDate(lunes.getDate() + 7);
+    lunes = siguiente;
+  }
+  return bloquesSemana(semanas, horarios).join('\n\n');
+}
+
+// ── ExportModal ───────────────────────────────────────────────────────────────
+
+function ExportModal({ titulo, mensaje, onClose }) {
+  const [copiado, setCopiado] = useState(false);
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(mensaje);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch { /* silent */ }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-xl bg-white shadow-xl flex flex-col max-h-[85vh]">
+
+        {/* Cabecera */}
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 shrink-0">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">{titulo}</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Listo para copiar y pegar en WhatsApp</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            aria-label="Cerrar"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Mensaje — desplazable */}
+        <div className="overflow-y-auto flex-1 px-5 py-4">
+          <pre className="text-sm text-gray-800 bg-gray-50 rounded-xl border border-gray-200 px-4 py-4 whitespace-pre-wrap font-sans leading-relaxed select-all">
+            {mensaje}
+          </pre>
+        </div>
+
+        {/* Pie */}
+        <div className="shrink-0 px-5 pb-5 pt-3 flex gap-2 justify-end border-t border-gray-100">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Cerrar
+          </button>
+          <button
+            onClick={copiar}
+            className={[
+              'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+              copiado
+                ? 'bg-green-100 text-green-700 border border-green-300'
+                : 'bg-green-600 text-white hover:bg-green-700',
+            ].join(' ')}
+          >
+            {copiado ? '✓ Copiado' : 'Copiar'}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 // ── TurnoCard ────────────────────────────────────────────────────────────────
 
 function TurnoCard({ turno, scheme, label, isAdmin, onClick }) {
@@ -116,6 +257,9 @@ export default function CalendarioPage() {
   // Modals
   const [modalAbierto,         setModalAbierto]         = useState(false);
   const [modalEmpleadoAbierto, setModalEmpleadoAbierto] = useState(false);
+  const [exportModalAbierto,   setExportModalAbierto]   = useState(false);
+  const [exportData,           setExportData]           = useState({ titulo: '', mensaje: '' });
+  const [exportMenuAbierto,    setExportMenuAbierto]    = useState(false);
   const [turnoModal,           setTurnoModal]           = useState({
     fecha: '', turnoNum: 1, turnoExistente: null, turnosDelDia: null,
   });
@@ -213,6 +357,16 @@ export default function CalendarioPage() {
   function handleSave()   { setModalAbierto(false); setReloadKey((k) => k + 1); }
   function handleDelete() { setModalAbierto(false); setReloadKey((k) => k + 1); }
 
+  function handleExportar(tipo) {
+    const titulo  = tipo === 'mes' ? 'Exportar mes' : 'Exportar semana';
+    const mensaje = tipo === 'mes'
+      ? generarMensajeMes(horarios, anyo, mes)
+      : generarMensajeSemana(horarios);
+    setExportData({ titulo, mensaje });
+    setExportModalAbierto(true);
+    setExportMenuAbierto(false);
+  }
+
   // ── Datos del día ────────────────────────────────────────────────────────────
 
   const fechaKey   = toKey(anyo, mes, dia);
@@ -258,6 +412,50 @@ export default function CalendarioPage() {
             >
               + Nuevo empleado
             </button>
+          )}
+          {empleadoId && (
+            <div className="relative ml-auto">
+              <button
+                type="button"
+                onClick={() => setExportMenuAbierto((v) => !v)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-800 transition-colors whitespace-nowrap"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13 4.5a2.5 2.5 0 1 1 .702 1.737L6.97 9.604a2.518 2.518 0 0 1 0 .792l6.733 3.367a2.5 2.5 0 1 1-.671 1.341l-6.733-3.367a2.5 2.5 0 1 1 0-3.474l6.733-3.366A2.519 2.519 0 0 1 13 4.5Z" />
+                </svg>
+                Exportar
+                <svg className={`h-3.5 w-3.5 transition-transform ${exportMenuAbierto ? 'rotate-180' : ''}`} viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" />
+                </svg>
+              </button>
+
+              {exportMenuAbierto && (
+                <>
+                  {/* Overlay para cerrar al hacer clic fuera */}
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setExportMenuAbierto(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 z-20 w-40 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => handleExportar('semana')}
+                      className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Esta semana
+                    </button>
+                    <div className="border-t border-gray-100" />
+                    <button
+                      type="button"
+                      onClick={() => handleExportar('mes')}
+                      className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Este mes
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -476,6 +674,15 @@ export default function CalendarioPage() {
           isOpen={modalEmpleadoAbierto}
           onClose={() => setModalEmpleadoAbierto(false)}
           onCreado={() => setEmpleadosReloadKey((k) => k + 1)}
+        />
+      )}
+
+      {/* Modal de exportar */}
+      {exportModalAbierto && (
+        <ExportModal
+          titulo={exportData.titulo}
+          mensaje={exportData.mensaje}
+          onClose={() => setExportModalAbierto(false)}
         />
       )}
     </div>
