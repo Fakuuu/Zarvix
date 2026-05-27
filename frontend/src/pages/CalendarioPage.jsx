@@ -103,6 +103,27 @@ function generarMensajeMes(horarios, anyo, mes) {
   return bloquesSemana(semanas, horarios).join('\n\n');
 }
 
+// ── Hook de animación para modales ───────────────────────────────────────────
+
+function useModalAnim(isOpen, duration = 300) {
+  const [mounted, setMounted] = useState(isOpen);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true);
+      const id = requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
+      return () => cancelAnimationFrame(id);
+    } else {
+      setVisible(false);
+      const t = setTimeout(() => setMounted(false), duration);
+      return () => clearTimeout(t);
+    }
+  }, [isOpen, duration]);
+
+  return { mounted, visible };
+}
+
 // ── Helpers rango personalizado ───────────────────────────────────────────────
 
 function lunesDe(fecha) {
@@ -163,7 +184,9 @@ async function fetchHorariosRango(empleadoId, inicioDate, finDate) {
 
 // ── RangoModal ────────────────────────────────────────────────────────────────
 
-function RangoModal({ empleadoId, onGenerar, onClose }) {
+function RangoModal({ isOpen, empleadoId, onGenerar, onClose }) {
+  const { mounted, visible } = useModalAnim(isOpen);
+  if (!mounted) return null;
   const hoy = new Date();
   const [inicio,   setInicio]   = useState(toInputDate(lunesDe(hoy)));
   const [fin,      setFin]      = useState(toInputDate(domingoDe(hoy)));
@@ -202,10 +225,10 @@ function RangoModal({ empleadoId, onGenerar, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 modal-overlay${visible ? ' modal-open' : ''}`}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl bg-white shadow-xl flex flex-col">
+      <div className={`w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl bg-white shadow-xl flex flex-col modal-panel${visible ? ' modal-open' : ''}`}>
 
         {/* Cabecera */}
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 shrink-0">
@@ -309,8 +332,10 @@ function RangoModal({ empleadoId, onGenerar, onClose }) {
 
 // ── ExportModal ───────────────────────────────────────────────────────────────
 
-function ExportModal({ titulo, mensaje, advertencia, onClose }) {
+function ExportModal({ isOpen, titulo, mensaje, advertencia, onClose }) {
+  const { mounted, visible } = useModalAnim(isOpen);
   const [copiado, setCopiado] = useState(false);
+  if (!mounted) return null;
 
   async function copiar() {
     try {
@@ -322,10 +347,10 @@ function ExportModal({ titulo, mensaje, advertencia, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 modal-overlay${visible ? ' modal-open' : ''}`}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-xl bg-white shadow-xl flex flex-col max-h-[85vh]">
+      <div className={`w-full sm:max-w-md rounded-t-2xl sm:rounded-xl bg-white shadow-xl flex flex-col max-h-[85vh] modal-panel${visible ? ' modal-open' : ''}`}>
 
         {/* Cabecera */}
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 shrink-0">
@@ -461,9 +486,9 @@ export default function CalendarioPage() {
   const [reloadKey,          setReloadKey]          = useState(0);
   const [vistaActual,        setVistaActual]        = useState('dia');
 
-  // Animación
-  const [animDir,     setAnimDir]     = useState('in-right');
-  const [animVersion, setAnimVersion] = useState(0);
+  // Transición entre días (push)
+  const [dayTrans, setDayTrans] = useState({ active: false, fromDia: HOY_D, toDia: HOY_D, dir: 'forward' });
+  const dayTransTimer = useRef(null);
 
   // Modals
   const [modalAbierto,         setModalAbierto]         = useState(false);
@@ -508,17 +533,25 @@ export default function CalendarioPage() {
   // ── Navegación por días ──────────────────────────────────────────────────────
 
   function irAntes() {
-    if (dia <= 1) return;
-    setAnimDir('in-left');
-    setAnimVersion((v) => v + 1);
-    setDia((d) => d - 1);
+    if (dia <= 1 || dayTrans.active) return;
+    const newDia = dia - 1;
+    setDia(newDia);
+    setDayTrans({ active: true, fromDia: dia, toDia: newDia, dir: 'backward' });
+    clearTimeout(dayTransTimer.current);
+    dayTransTimer.current = setTimeout(
+      () => setDayTrans((s) => ({ ...s, active: false })), 250
+    );
   }
 
   function irDespues() {
-    if (dia >= totalDias) return;
-    setAnimDir('in-right');
-    setAnimVersion((v) => v + 1);
-    setDia((d) => d + 1);
+    if (dia >= totalDias || dayTrans.active) return;
+    const newDia = dia + 1;
+    setDia(newDia);
+    setDayTrans({ active: true, fromDia: dia, toDia: newDia, dir: 'forward' });
+    clearTimeout(dayTransTimer.current);
+    dayTransTimer.current = setTimeout(
+      () => setDayTrans((s) => ({ ...s, active: false })), 250
+    );
   }
 
   // ── Navegación por meses ─────────────────────────────────────────────────────
@@ -592,6 +625,61 @@ export default function CalendarioPage() {
     setRangoModalAbierto(false);
     setExportData({ titulo: 'Rango personalizado', mensaje, advertencia });
     setExportModalAbierto(true);
+  }
+
+  // ── Render de tarjetas del día (reutilizado en transición push) ─────────────
+
+  function renderCards(d, interactive) {
+    const key    = toKey(anyo, mes, d);
+    const turnos = horarios[key] ?? {};
+    const t1     = turnos[1] ?? null;
+    const t2     = turnos[2] ?? null;
+    const esFDSd = (() => { const dow = new Date(anyo, mes - 1, d).getDay(); return dow === 0 || dow === 6; })();
+
+    return (
+      <div className="space-y-3">
+        {t1 && (
+          <TurnoCard
+            turno={t1} scheme="green" label="Turno 1"
+            isAdmin={isAdmin && interactive}
+            onClick={() => interactive && abrirModal(1, t1, { 1: t1, 2: t2 })}
+          />
+        )}
+        {t2 && (
+          <TurnoCard
+            turno={t2} scheme="blue" label="Turno 2"
+            isAdmin={isAdmin && interactive}
+            onClick={() => interactive && abrirModal(2, t2, { 1: t1, 2: t2 })}
+          />
+        )}
+        {!t1 && !t2 && (
+          <div className={[
+            'flex flex-col items-center justify-center gap-3 py-12 rounded-2xl border border-dashed',
+            esFDSd ? 'border-gray-200 bg-gray-50/60' : 'border-gray-200 bg-white',
+          ].join(' ')}>
+            <span className="text-sm text-gray-400">Sin turno registrado</span>
+            {isAdmin && interactive && (
+              <button
+                type="button"
+                onClick={() => abrirModal(1, null, { 1: null, 2: null })}
+                className="text-sm font-medium text-green-600 border border-dashed border-green-300 hover:border-green-500 hover:bg-green-50 px-4 py-2 rounded-xl transition-colors"
+              >
+                + Añadir turno
+              </button>
+            )}
+          </div>
+        )}
+        {t1 && !t2 && isAdmin && interactive && (
+          <button
+            type="button"
+            onClick={() => abrirModal(2, null, { 1: t1, 2: null })}
+            className="w-full text-sm font-medium text-blue-500 hover:text-blue-700 border border-dashed border-blue-300 hover:border-blue-400 hover:bg-blue-50 py-3 rounded-2xl bg-white transition-colors"
+          >
+            + Añadir turno 2 (jornada partida)
+          </button>
+        )}
+      </div>
+    );
   }
 
   // ── Datos del día ────────────────────────────────────────────────────────────
@@ -734,7 +822,7 @@ export default function CalendarioPage() {
 
         {/* Vista mensual o diaria */}
         {vistaActual === 'mes' ? (
-          <div key="mes" className="fade-in-scale">
+          <div key="mes" className="fade-in">
             {!empleadoId ? (
               <div className="flex-1 flex items-center justify-center py-16 text-gray-400 text-sm">
                 Selecciona un empleado para ver sus turnos.
@@ -802,62 +890,26 @@ export default function CalendarioPage() {
                 <div className="h-24 rounded-2xl bg-gray-200 animate-pulse" />
                 <div className="h-24 rounded-2xl bg-gray-200 animate-pulse opacity-60" />
               </div>
+            ) : dayTrans.active ? (
+              /* Transición push: dos slots simultáneos */
+              <div className="relative overflow-hidden">
+                <div
+                  className={`absolute inset-0 pointer-events-none ${dayTrans.dir === 'forward' ? 'slide-exit-left' : 'slide-exit-right'}`}
+                  aria-hidden="true"
+                >
+                  {renderCards(dayTrans.fromDia, false)}
+                </div>
+                <div
+                  className={dayTrans.dir === 'forward' ? 'slide-enter-right' : 'slide-enter-left'}
+                  onTouchStart={onTouchStart}
+                  onTouchEnd={onTouchEnd}
+                >
+                  {renderCards(dayTrans.toDia, true)}
+                </div>
+              </div>
             ) : (
-              <div
-                key={animVersion}
-                className={`space-y-3 slide-${animDir}`}
-                onTouchStart={onTouchStart}
-                onTouchEnd={onTouchEnd}
-              >
-                {turno1 && (
-                  <TurnoCard
-                    turno={turno1}
-                    scheme="green"
-                    label="Turno 1"
-                    isAdmin={isAdmin}
-                    onClick={() => abrirModal(1, turno1, { 1: turno1, 2: turno2 })}
-                  />
-                )}
-
-                {turno2 && (
-                  <TurnoCard
-                    turno={turno2}
-                    scheme="blue"
-                    label="Turno 2"
-                    isAdmin={isAdmin}
-                    onClick={() => abrirModal(2, turno2, { 1: turno1, 2: turno2 })}
-                  />
-                )}
-
-                {/* Sin turno */}
-                {!turno1 && !turno2 && (
-                  <div className={[
-                    'flex flex-col items-center justify-center gap-3 py-12 rounded-2xl border border-dashed',
-                    esFDS ? 'border-gray-200 bg-gray-50/60' : 'border-gray-200 bg-white',
-                  ].join(' ')}>
-                    <span className="text-sm text-gray-400">Sin turno registrado</span>
-                    {isAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => abrirModal(1, null, { 1: null, 2: null })}
-                        className="text-sm font-medium text-green-600 border border-dashed border-green-300 hover:border-green-500 hover:bg-green-50 px-4 py-2 rounded-xl transition-colors"
-                      >
-                        + Añadir turno
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Añadir turno 2 si solo existe turno 1 */}
-                {turno1 && !turno2 && isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => abrirModal(2, null, { 1: turno1, 2: null })}
-                    className="w-full text-sm font-medium text-blue-500 hover:text-blue-700 border border-dashed border-blue-300 hover:border-blue-400 hover:bg-blue-50 py-3 rounded-2xl bg-white transition-colors"
-                  >
-                    + Añadir turno 2 (jornada partida)
-                  </button>
-                )}
+              <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+                {renderCards(dia, true)}
               </div>
             )}
           </div>
@@ -868,10 +920,11 @@ export default function CalendarioPage() {
       {/* Botón flotante + (admin) */}
       {isAdmin && empleadoId && (
         <button
+          key={empleadoId}
           type="button"
           onClick={() => abrirModal(1, turno1, { 1: turno1, 2: turno2 })}
           aria-label={turno1 ? 'Editar turno' : 'Añadir turno'}
-          className="fixed bottom-[4.5rem] right-4 z-40 w-14 h-14 rounded-full bg-green-600 text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all flex items-center justify-center"
+          className="fixed bottom-[4.5rem] right-4 z-40 w-14 h-14 rounded-full bg-green-600 text-white shadow-xl hover:bg-green-700 active:scale-95 transition-all flex items-center justify-center fab-appear"
         >
           {turno1 ? (
             <svg className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
@@ -942,23 +995,21 @@ export default function CalendarioPage() {
       )}
 
       {/* Modal de rango personalizado */}
-      {rangoModalAbierto && (
-        <RangoModal
-          empleadoId={empleadoId}
-          onGenerar={handleRangoGenerado}
-          onClose={() => setRangoModalAbierto(false)}
-        />
-      )}
+      <RangoModal
+        isOpen={rangoModalAbierto}
+        empleadoId={empleadoId}
+        onGenerar={handleRangoGenerado}
+        onClose={() => setRangoModalAbierto(false)}
+      />
 
       {/* Modal de exportar */}
-      {exportModalAbierto && (
-        <ExportModal
-          titulo={exportData.titulo}
-          mensaje={exportData.mensaje}
-          advertencia={exportData.advertencia}
-          onClose={() => setExportModalAbierto(false)}
-        />
-      )}
+      <ExportModal
+        isOpen={exportModalAbierto}
+        titulo={exportData.titulo}
+        mensaje={exportData.mensaje}
+        advertencia={exportData.advertencia}
+        onClose={() => setExportModalAbierto(false)}
+      />
     </div>
   );
 }

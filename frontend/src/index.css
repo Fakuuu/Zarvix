@@ -2,19 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
-@keyframes slideInFromRight {
-  from { transform: translateX(28px); opacity: 0; }
-  to   { transform: translateX(0);    opacity: 1; }
-}
-@keyframes slideInFromLeft {
-  from { transform: translateX(-28px); opacity: 0; }
-  to   { transform: translateX(0);     opacity: 1; }
-}
-.slide-in-right { animation: slideInFromRight 0.18s ease-out; }
-.slide-in-left  { animation: slideInFromLeft  0.18s ease-out; }
+/* ── Navegación entre días (push transition) ─────────────────────────────── */
 
-@keyframes fadeInScale {
-  from { opacity: 0; transform: scale(0.98); }
-  to   { opacity: 1; transform: scale(1); }
+@keyframes slideEnterRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0);    }
 }
-.fade-in-scale { animation: fadeInScale 0.2s ease-out; }
+@keyframes slideEnterLeft {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0);     }
+}
+@keyframes slideExitLeft {
+  from { transform: translateX(0);    }
+  to   { transform: translateX(-100%); }
+}
+@keyframes slideExitRight {
+  from { transform: translateX(0);   }
+  to   { transform: translateX(100%); }
+}
+
+.slide-enter-right { animation: slideEnterRight 250ms ease-in-out both; }
+.slide-enter-left  { animation: slideEnterLeft  250ms ease-in-out both; }
+.slide-exit-left   { animation: slideExitLeft   250ms ease-in-out both; }
+.slide-exit-right  { animation: slideExitRight  250ms ease-in-out both; }
+
+/* ── Cambio entre vista día y vista mes (fade) ───────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.fade-in { animation: fadeIn 200ms ease-in-out both; }
+
+/* ── Overlay de modal ────────────────────────────────────────────────────── */
+
+.modal-overlay {
+  background-color: rgb(0 0 0 / 0.5);
+  opacity: 0;
+  transition: opacity 300ms ease-in-out;
+}
+.modal-overlay.modal-open { opacity: 1; }
+
+/* ── Panel de modal (slide-up desde abajo) ───────────────────────────────── */
+
+.modal-panel {
+  transform: translateY(100%);
+  transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.modal-panel.modal-open { transform: translateY(0); }
+
+/* ── Botón flotante FAB (aparición con bounce) ───────────────────────────── */
+
+@keyframes fabAppear {
+  0%   { transform: scale(0.75); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+.fab-appear { animation: fabAppear 400ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* ── prefers-reduced-motion ──────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .slide-enter-right, .slide-enter-left,
+  .slide-exit-left,   .slide-exit-right,
+  .fade-in, .fab-appear {
+    animation: none !important;
+  }
+  .modal-overlay,
+  .modal-panel {
+    transition: none !important;
+  }
+}

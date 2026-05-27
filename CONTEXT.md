@@ -732,3 +732,43 @@ Docker no permite salir del build context con `../`. El contexto era `./backend`
 - Exportación: 3 opciones (semana actual, mes actual, rango personalizado)
 - Build verificado limpio (0 errores, 0 warnings)
 - Docker / Deploy: sin cambios
+
+---
+
+## [2026-05-27] Animaciones nativas — transiciones y modales
+
+### Qué se ha implementado
+
+**Navegación entre días (push transition real):**
+- Sistema de dos slots simultáneos: el día saliente se anima hacia fuera mientras el día entrante se anima hacia dentro al mismo tiempo
+- Hacia adelante (flecha > / swipe izquierda): saliente→izquierda, entrante←derecha
+- Hacia atrás (flecha < / swipe derecha): saliente→derecha, entrante←izquierda
+- Duración 250ms `ease-in-out`; el slot saliente tiene `pointer-events: none` para evitar clicks accidentales
+- Estado `dayTrans` + `dayTransTimer` ref para gestionar la fase de transición
+
+**Modales (slide-up / fade):**
+- Overlay: `opacity 0 → 1` con `transition 300ms ease-in-out` al abrir; se invierte al cerrar
+- Panel: `translateY(100%) → translateY(0)` con `cubic-bezier(0.32, 0.72, 0, 1)` al abrir; se invierte al cerrar
+- Patrón de desmontaje retrasado (`useModalAnim` hook en CalendarioPage; lógica inline en TurnoModal): el DOM element permanece 300ms después de `isOpen=false` para completar la animación de salida
+- Afecta a: `TurnoModal`, `ExportModal`, `RangoModal`
+
+**Cambio vista día ↔ mes:**
+- Fade in `200ms ease-in-out` al mostrar la vista mensual
+
+**FAB (botón flotante +):**
+- Animación `fabAppear` al montar: `scale(0.75) → scale(1.08) → scale(1)` con `cubic-bezier(0.34, 1.56, 0.64, 1)` (bounce suave), 400ms
+- Clave `key={empleadoId}` para re-animar al cambiar de empleado
+
+**prefers-reduced-motion:**
+- Todas las animaciones CSS desactivadas (`animation: none; transition: none`) cuando el sistema tiene activada la opción de reducir movimiento
+
+### Ficheros creados o modificados
+| Fichero | Acción |
+|---|---|
+| `/frontend/src/index.css` | Reescrito — nuevos keyframes y clases de animación |
+| `/frontend/src/components/TurnoModal.jsx` | Modificado — animation state + overlay/panel CSS |
+| `/frontend/src/pages/CalendarioPage.jsx` | Modificado — `useModalAnim`, `renderCards`, `dayTrans`, FAB key, modals siempre renderizados |
+
+### Estado actual del proyecto
+- Build verificado limpio (85 módulos, 0 errores)
+- `NuevoEmpleadoModal` no actualizado (fuera del scope de esta tarea)

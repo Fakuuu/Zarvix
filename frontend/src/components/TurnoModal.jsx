@@ -98,31 +98,41 @@ export default function TurnoModal({
   const [eliminando,    setEliminando]    = useState(false);
   const [confirmarDel,  setConfirmarDel]  = useState(false);
 
+  // Animación open/close
+  const [mounted, setMounted] = useState(false);
+  const [opened,  setOpened]  = useState(false);
+
   useEffect(() => {
-    if (!isOpen) return;
-    setError('');
-    setConfirmarDel(false);
-
-    // turnosDelDia tiene precedencia para pre-rellenar ambos turnos
-    const t1 = turnosDelDia?.[1] ?? (turnoNum === 1 ? turnoExistente : null);
-    const t2 = turnosDelDia?.[2] ?? (turnoNum === 2 ? turnoExistente : null);
-
-    setEntrada1(toHHMM(t1?.horaEntrada) ?? null);
-    setSalida1(toHHMM(t1?.horaSalida)   ?? null);
-    setNotas(t1?.notas ?? '');
-
-    if (t2) {
-      setJornadaPartida(true);
-      setEntrada2(toHHMM(t2.horaEntrada));
-      setSalida2(toHHMM(t2.horaSalida));
+    if (isOpen) {
+      // Resetear formulario y montar en el mismo ciclo para evitar flash de datos viejos
+      setError('');
+      setConfirmarDel(false);
+      const t1 = turnosDelDia?.[1] ?? (turnoNum === 1 ? turnoExistente : null);
+      const t2 = turnosDelDia?.[2] ?? (turnoNum === 2 ? turnoExistente : null);
+      setEntrada1(toHHMM(t1?.horaEntrada) ?? null);
+      setSalida1(toHHMM(t1?.horaSalida)   ?? null);
+      setNotas(t1?.notas ?? '');
+      if (t2) {
+        setJornadaPartida(true);
+        setEntrada2(toHHMM(t2.horaEntrada));
+        setSalida2(toHHMM(t2.horaSalida));
+      } else {
+        setJornadaPartida(turnoNum === 2);
+        setEntrada2(null);
+        setSalida2(null);
+      }
+      // Montar y disparar transición en el siguiente frame
+      setMounted(true);
+      const id = requestAnimationFrame(() => requestAnimationFrame(() => setOpened(true)));
+      return () => cancelAnimationFrame(id);
     } else {
-      setJornadaPartida(turnoNum === 2);
-      setEntrada2(null);
-      setSalida2(null);
+      setOpened(false);
+      const t = setTimeout(() => setMounted(false), 300);
+      return () => clearTimeout(t);
     }
   }, [isOpen, turnoExistente, turnosDelDia, turnoNum]);
 
-  if (!isOpen) return null;
+  if (!mounted) return null;
 
   function tap1(hora) {
     setError('');
@@ -220,12 +230,12 @@ export default function TurnoModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 modal-overlay${opened ? ' modal-open' : ''}`}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <form
         onSubmit={handleGuardar}
-        className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-xl bg-white shadow-xl max-h-[93vh] flex flex-col"
+        className={`w-full sm:max-w-lg rounded-t-2xl sm:rounded-xl bg-white shadow-xl max-h-[93vh] flex flex-col modal-panel${opened ? ' modal-open' : ''}`}
       >
         {/* Cabecera */}
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 shrink-0">
