@@ -678,4 +678,31 @@ Docker no permite salir del build context con `../`. El contexto era `./backend`
 ### Estado actual del proyecto
 - Frontend: 100% funcional — flujo de creación de empleados operativo desde la vista admin
 - Backend: `POST /api/empleados` ya existía y protegido con JWT
+
+---
+
+## [2026-05-27] Vista mensual de calendario
+
+### Qué se ha implementado
+- Nuevo componente `CalendarioMensual.jsx` con cuadrícula 7×N (L M X J V S D)
+- Días del mes anterior y siguiente visibles en gris claro (no interactivos) para completar la cuadrícula
+- Sábado y domingo con fondo `bg-gray-50/70`; hoy con `ring-2 ring-inset ring-green-500`
+- Cada celda muestra número del día + horas de cada turno en `text-[8px]` (verde t1 / azul t2)
+- Puntos indicadores debajo del número: verde `#1D9E75` si turno 1, azul `#378ADD` si turno 2
+- Días pasados sin turno con número en gris claro
+- Clic en un día del mes actual navega a ese día en la vista diaria
+- Botón toggle "Ver mes" / "Ver día" en la fila del selector de mes (junto a las flechas)
+- Transición suave `fade-in-scale` (0.2s) al cambiar entre vistas
+- Animación añadida en `index.css`: `@keyframes fadeInScale`
+
+### Ficheros creados o modificados
+| Fichero | Acción |
+|---|---|
+| `/frontend/src/components/CalendarioMensual.jsx` | Creado — componente de cuadrícula mensual |
+| `/frontend/src/index.css` | Modificado — animación `fade-in-scale` añadida |
+| `/frontend/src/pages/CalendarioPage.jsx` | Modificado — estado `vistaActual`, handler `irADia`, botón toggle, render condicional |
+
+### Estado actual del proyecto
+- Vista mensual completamente funcional y verificada con build limpio (85 módulos, 0 errores)
+- La vista diaria existente no ha sido alterada
 - Docker / Deploy: sin cambios

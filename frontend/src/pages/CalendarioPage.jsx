@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import SelectorEmpleado from '../components/SelectorEmpleado';
 import TurnoModal from '../components/TurnoModal';
 import NuevoEmpleadoModal from '../components/NuevoEmpleadoModal';
+import CalendarioMensual from '../components/CalendarioMensual';
 import client from '../api/client';
 
 const DIAS_ES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -249,6 +250,7 @@ export default function CalendarioPage() {
   const [horarios,           setHorarios]           = useState({});
   const [cargando,           setCargando]           = useState(false);
   const [reloadKey,          setReloadKey]          = useState(0);
+  const [vistaActual,        setVistaActual]        = useState('dia');
 
   // Animación
   const [animDir,     setAnimDir]     = useState('in-right');
@@ -325,6 +327,11 @@ export default function CalendarioPage() {
     setAnyo(a); setMes(m);
     setDia(a === HOY_A && m === HOY_M ? HOY_D : 1);
     setAnimVersion((v) => v + 1);
+  }
+
+  function irADia(a, m, d) {
+    setAnyo(a); setMes(m); setDia(d);
+    setVistaActual('dia');
   }
 
   // ── Swipe ────────────────────────────────────────────────────────────────────
@@ -463,138 +470,167 @@ export default function CalendarioPage() {
       {/* Contenido principal */}
       <main className="flex-1 max-w-lg w-full mx-auto px-4 pt-4 pb-28 flex flex-col gap-3">
 
-        {/* Indicador de mes con navegación */}
-        <div className="flex items-center justify-center gap-1">
+        {/* Indicador de mes con navegación y toggle de vista */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={irMesAntes}
+              aria-label="Mes anterior"
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M10.78 3.22a.75.75 0 0 1 0 1.06L7.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" />
+              </svg>
+            </button>
+            <span className="text-sm font-semibold text-gray-600 select-none min-w-[130px] text-center">
+              {MESES_ES[mes - 1]} {anyo}
+            </span>
+            <button
+              onClick={irMesDespues}
+              aria-label="Mes siguiente"
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M5.22 3.22a.75.75 0 0 0 0 1.06L8.94 8 5.22 11.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06L6.28 3.22a.75.75 0 0 0-1.06 0Z" />
+              </svg>
+            </button>
+          </div>
           <button
-            onClick={irMesAntes}
-            aria-label="Mes anterior"
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors"
+            type="button"
+            onClick={() => setVistaActual((v) => v === 'dia' ? 'mes' : 'dia')}
+            className="text-sm font-medium text-green-700 border border-green-300 bg-white hover:bg-green-50 hover:border-green-500 px-3 py-1 rounded-lg transition-colors whitespace-nowrap"
           >
-            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M10.78 3.22a.75.75 0 0 1 0 1.06L7.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" />
-            </svg>
-          </button>
-          <span className="text-sm font-semibold text-gray-600 select-none min-w-[140px] text-center">
-            {MESES_ES[mes - 1]} {anyo}
-          </span>
-          <button
-            onClick={irMesDespues}
-            aria-label="Mes siguiente"
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M5.22 3.22a.75.75 0 0 0 0 1.06L8.94 8 5.22 11.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06L6.28 3.22a.75.75 0 0 0-1.06 0Z" />
-            </svg>
+            {vistaActual === 'dia' ? 'Ver mes' : 'Ver día'}
           </button>
         </div>
 
-        {/* Navegador de día (también captura el swipe) */}
-        <div
-          className={[
-            'flex items-center gap-2 bg-white rounded-2xl border px-3 py-3 shadow-sm',
-            esHoy ? 'border-green-400 bg-green-50/40' : 'border-gray-200',
-          ].join(' ')}
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-        >
-          <button
-            onClick={irAntes}
-            disabled={dia <= 1}
-            aria-label="Día anterior"
-            className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors disabled:opacity-20 disabled:pointer-events-none"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M10.78 3.22a.75.75 0 0 1 0 1.06L7.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" />
-            </svg>
-          </button>
-
-          <div className="flex-1 text-center select-none">
-            <div className={`text-lg font-bold leading-tight ${esHoy ? 'text-green-600' : esFDS ? 'text-indigo-600' : 'text-gray-900'}`}>
-              {nombreDia} {dia}
-            </div>
-            <div className="text-xs text-gray-400 mt-0.5">
-              {MESES_ES_MIN[mes - 1]} {anyo}
-              {esHoy && <span className="ml-1.5 text-green-500 font-semibold">· Hoy</span>}
-            </div>
-          </div>
-
-          <button
-            onClick={irDespues}
-            disabled={dia >= totalDias}
-            aria-label="Día siguiente"
-            className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors disabled:opacity-20 disabled:pointer-events-none"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M5.22 3.22a.75.75 0 0 0 0 1.06L8.94 8 5.22 11.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06L6.28 3.22a.75.75 0 0 0-1.06 0Z" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Contenido del día */}
-        {!empleadoId ? (
-          <div className="flex-1 flex items-center justify-center py-16 text-gray-400 text-sm">
-            Selecciona un empleado para ver sus turnos.
-          </div>
-        ) : cargando ? (
-          <div className="space-y-3">
-            <div className="h-24 rounded-2xl bg-gray-200 animate-pulse" />
-            <div className="h-24 rounded-2xl bg-gray-200 animate-pulse opacity-60" />
+        {/* Vista mensual o diaria */}
+        {vistaActual === 'mes' ? (
+          <div key="mes" className="fade-in-scale">
+            {!empleadoId ? (
+              <div className="flex-1 flex items-center justify-center py-16 text-gray-400 text-sm">
+                Selecciona un empleado para ver sus turnos.
+              </div>
+            ) : (
+              <CalendarioMensual
+                anyo={anyo}
+                mes={mes}
+                horarios={horarios}
+                onDiaClick={irADia}
+              />
+            )}
           </div>
         ) : (
-          <div
-            key={animVersion}
-            className={`space-y-3 slide-${animDir}`}
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
-          >
-            {turno1 && (
-              <TurnoCard
-                turno={turno1}
-                scheme="green"
-                label="Turno 1"
-                isAdmin={isAdmin}
-                onClick={() => abrirModal(1, turno1, { 1: turno1, 2: turno2 })}
-              />
-            )}
+          <div key="dia">
+            {/* Navegador de día (también captura el swipe) */}
+            <div
+              className={[
+                'flex items-center gap-2 bg-white rounded-2xl border px-3 py-3 shadow-sm mb-3',
+                esHoy ? 'border-green-400 bg-green-50/40' : 'border-gray-200',
+              ].join(' ')}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+            >
+              <button
+                onClick={irAntes}
+                disabled={dia <= 1}
+                aria-label="Día anterior"
+                className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors disabled:opacity-20 disabled:pointer-events-none"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M10.78 3.22a.75.75 0 0 1 0 1.06L7.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" />
+                </svg>
+              </button>
 
-            {turno2 && (
-              <TurnoCard
-                turno={turno2}
-                scheme="blue"
-                label="Turno 2"
-                isAdmin={isAdmin}
-                onClick={() => abrirModal(2, turno2, { 1: turno1, 2: turno2 })}
-              />
-            )}
+              <div className="flex-1 text-center select-none">
+                <div className={`text-lg font-bold leading-tight ${esHoy ? 'text-green-600' : esFDS ? 'text-indigo-600' : 'text-gray-900'}`}>
+                  {nombreDia} {dia}
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">
+                  {MESES_ES_MIN[mes - 1]} {anyo}
+                  {esHoy && <span className="ml-1.5 text-green-500 font-semibold">· Hoy</span>}
+                </div>
+              </div>
 
-            {/* Sin turno */}
-            {!turno1 && !turno2 && (
-              <div className={[
-                'flex flex-col items-center justify-center gap-3 py-12 rounded-2xl border border-dashed',
-                esFDS ? 'border-gray-200 bg-gray-50/60' : 'border-gray-200 bg-white',
-              ].join(' ')}>
-                <span className="text-sm text-gray-400">Sin turno registrado</span>
-                {isAdmin && (
+              <button
+                onClick={irDespues}
+                disabled={dia >= totalDias}
+                aria-label="Día siguiente"
+                className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors disabled:opacity-20 disabled:pointer-events-none"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M5.22 3.22a.75.75 0 0 0 0 1.06L8.94 8 5.22 11.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06L6.28 3.22a.75.75 0 0 0-1.06 0Z" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Contenido del día */}
+            {!empleadoId ? (
+              <div className="flex-1 flex items-center justify-center py-16 text-gray-400 text-sm">
+                Selecciona un empleado para ver sus turnos.
+              </div>
+            ) : cargando ? (
+              <div className="space-y-3">
+                <div className="h-24 rounded-2xl bg-gray-200 animate-pulse" />
+                <div className="h-24 rounded-2xl bg-gray-200 animate-pulse opacity-60" />
+              </div>
+            ) : (
+              <div
+                key={animVersion}
+                className={`space-y-3 slide-${animDir}`}
+                onTouchStart={onTouchStart}
+                onTouchEnd={onTouchEnd}
+              >
+                {turno1 && (
+                  <TurnoCard
+                    turno={turno1}
+                    scheme="green"
+                    label="Turno 1"
+                    isAdmin={isAdmin}
+                    onClick={() => abrirModal(1, turno1, { 1: turno1, 2: turno2 })}
+                  />
+                )}
+
+                {turno2 && (
+                  <TurnoCard
+                    turno={turno2}
+                    scheme="blue"
+                    label="Turno 2"
+                    isAdmin={isAdmin}
+                    onClick={() => abrirModal(2, turno2, { 1: turno1, 2: turno2 })}
+                  />
+                )}
+
+                {/* Sin turno */}
+                {!turno1 && !turno2 && (
+                  <div className={[
+                    'flex flex-col items-center justify-center gap-3 py-12 rounded-2xl border border-dashed',
+                    esFDS ? 'border-gray-200 bg-gray-50/60' : 'border-gray-200 bg-white',
+                  ].join(' ')}>
+                    <span className="text-sm text-gray-400">Sin turno registrado</span>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => abrirModal(1, null, { 1: null, 2: null })}
+                        className="text-sm font-medium text-green-600 border border-dashed border-green-300 hover:border-green-500 hover:bg-green-50 px-4 py-2 rounded-xl transition-colors"
+                      >
+                        + Añadir turno
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Añadir turno 2 si solo existe turno 1 */}
+                {turno1 && !turno2 && isAdmin && (
                   <button
                     type="button"
-                    onClick={() => abrirModal(1, null, { 1: null, 2: null })}
-                    className="text-sm font-medium text-green-600 border border-dashed border-green-300 hover:border-green-500 hover:bg-green-50 px-4 py-2 rounded-xl transition-colors"
+                    onClick={() => abrirModal(2, null, { 1: turno1, 2: null })}
+                    className="w-full text-sm font-medium text-blue-500 hover:text-blue-700 border border-dashed border-blue-300 hover:border-blue-400 hover:bg-blue-50 py-3 rounded-2xl bg-white transition-colors"
                   >
-                    + Añadir turno
+                    + Añadir turno 2 (jornada partida)
                   </button>
                 )}
               </div>
-            )}
-
-            {/* Añadir turno 2 si solo existe turno 1 */}
-            {turno1 && !turno2 && isAdmin && (
-              <button
-                type="button"
-                onClick={() => abrirModal(2, null, { 1: turno1, 2: null })}
-                className="w-full text-sm font-medium text-blue-500 hover:text-blue-700 border border-dashed border-blue-300 hover:border-blue-400 hover:bg-blue-50 py-3 rounded-2xl bg-white transition-colors"
-              >
-                + Añadir turno 2 (jornada partida)
-              </button>
             )}
           </div>
         )}
