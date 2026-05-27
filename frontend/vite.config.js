@@ -7,6 +7,15 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        // Toma control inmediato sin esperar recarga del cliente
+        clientsClaim: true,
+        skipWaiting: true,
+        // SPA offline: si la navegación falla, sirve el index.html cacheado
+        navigateFallback: '/index.html',
+        // Las rutas de API no pasan por el SW (la app usa IndexedDB para eso)
+        navigateFallbackDenylist: [/^\/api\//],
+      },
       manifest: {
         name: 'Zarvix',
         short_name: 'Zarvix',

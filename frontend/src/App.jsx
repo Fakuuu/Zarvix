@@ -5,18 +5,21 @@
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { NetworkProvider } from './context/NetworkContext';
 import CalendarioPage from './pages/CalendarioPage';
 import LoginPage from './pages/LoginPage';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<CalendarioPage />} />
-          <Route path="/login" element={<LoginPage />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <NetworkProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<CalendarioPage />} />
+            <Route path="/login" element={<LoginPage />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </NetworkProvider>
   );
 }

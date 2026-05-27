@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import client from '../api/client';
+import { useNetwork } from '../context/NetworkContext';
 
 // 08:00 → 22:00 en intervalos de 30 min → 29 slots
 const HORAS = (() => {
@@ -151,6 +152,10 @@ export default function TurnoModal({
   async function handleGuardar(e) {
     e.preventDefault();
     setError('');
+    if (!online) {
+      setError('Sin conexión. Los cambios no se pueden guardar sin internet.');
+      return;
+    }
 
     const t1Empty    = !entrada1 && !salida1;
     const t1Complete = Boolean(entrada1 && salida1);
@@ -207,6 +212,10 @@ export default function TurnoModal({
   }
 
   async function handleEliminar() {
+    if (!online) {
+      setError('Sin conexión. No se puede eliminar sin internet.');
+      return;
+    }
     if (!confirmarDel) { setConfirmarDel(true); return; }
     setEliminando(true);
     setError('');
@@ -222,6 +231,7 @@ export default function TurnoModal({
     }
   }
 
+  const { online } = useNetwork();
   const esEdicion   = Boolean(turnoExistente);
   const [ay, am, ad] = fecha ? fecha.split('-') : ['', '', ''];
   const fechaLeg    = ad ? `${ad}/${am}/${ay}` : fecha;
@@ -259,6 +269,14 @@ export default function TurnoModal({
 
         {/* Cuerpo desplazable */}
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+
+          {/* Banner sin conexión */}
+          {!online && (
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5 text-xs text-amber-700">
+              <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+              Sin conexión — solo lectura. Conecta para guardar cambios.
+            </div>
+          )}
 
           {/* ── Turno 1 ── */}
           <div>

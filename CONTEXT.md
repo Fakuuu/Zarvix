@@ -772,3 +772,63 @@ Docker no permite salir del build context con `../`. El contexto era `./backend`
 ### Estado actual del proyecto
 - Build verificado limpio (85 módulos, 0 errores)
 - `NuevoEmpleadoModal` no actualizado (fuera del scope de esta tarea)
+
+---
+
+## [2026-05-27] Modo offline completo con caché IndexedDB
+
+### Qué se ha implementado
+
+**Decisión de arquitectura clave:**
+Axios usa XHR por defecto; el Service Worker solo intercepta Fetch API. Por ello el caché de datos se gestiona en capa React con IndexedDB (control total, detección de "viene de caché") y Workbox se usa solo para la shell estática (HTML/CSS/JS/iconos).
+
+**Caché de datos (IndexedDB):**
+- `src/lib/idb.js`: wrapper mínimo sobre IndexedDB (`idbGet`, `idbSet`)
+- `src/api/client.js`: interceptor de respuesta guarda toda respuesta GET en IDB con `config.url` como clave; interceptor de error sirve el dato cacheado si `!error.response` (error de red) → el componente recibe `{ data, fromCache: true }` y funciona sin cambios
+- Se cachean `GET /api/horarios/:id/:a/:m` y `GET /api/empleados` automáticamente
+
+**Estado de red global (`NetworkContext`):**
+- `src/context/NetworkContext.jsx`: escucha eventos `online`/`offline` del navegador
+- Proporciona `{ online, syncing, setSyncing }` via `useNetwork()` hook
+- Estado `syncing` (azul) durante máx. 5 s tras reconexión; `CalendarioPage` lo limpia al terminar la recarga
+
+**Indicador visual en cabecera (`Header.jsx`):**
+- Verde (punto) = conectado
+- Naranja (punto + "Sin conexión") = offline
+- Azul (punto animado + "Sincronizando") = reconectando
+
+**Banner offline en `CalendarioPage`:**
+- Aparece encima del selector de mes cuando `!online`
+- Texto: "Sin conexión — mostrando datos guardados"
+- Al volver la conexión: recarga automática de horarios + estado syncing
+
+**Admin sin conexión (`TurnoModal.jsx`):**
+- Banner amarillo interno "Sin conexión — solo lectura"
+- `handleGuardar` y `handleEliminar` bloquean con mensaje de error si `!online`
+
+**Service Worker (`vite.config.js`):**
+- Añadidos `clientsClaim: true`, `skipWaiting: true` (toma control sin recarga)
+- `navigateFallback: '/index.html'` para SPA offline
+- `navigateFallbackDenylist: [/^\/api\//]` para no interceptar rutas API
+
+### Limitaciones conocidas
+- No hay cola de mutaciones offline (admin no puede guardar sin conexión, diseño intencional)
+- Background Sync API no implementada (no soportada en iOS Safari)
+- Los 3 meses de datos se cachean de forma natural según navegación del usuario, no hay prefetch proactivo
+- `NuevoEmpleadoModal` no añade bloqueo offline (fuera de scope)
+
+### Ficheros creados o modificados
+| Fichero | Acción |
+|---|---|
+| `frontend/src/lib/idb.js` | Creado — wrapper IndexedDB |
+| `frontend/src/context/NetworkContext.jsx` | Creado — estado de red global |
+| `frontend/src/api/client.js` | Modificado — interceptores de caché |
+| `frontend/src/App.jsx` | Modificado — NetworkProvider |
+| `frontend/src/components/Header.jsx` | Modificado — indicador de estado |
+| `frontend/src/pages/CalendarioPage.jsx` | Modificado — banner + reconexión |
+| `frontend/src/components/TurnoModal.jsx` | Modificado — bloqueo sin conexión |
+| `frontend/vite.config.js` | Modificado — Workbox clientsClaim + navigateFallback |
+
+### Estado actual del proyecto
+- Build verificado limpio (87 módulos, 0 errores)
+- La app funciona completamente sin internet tras la primera visita

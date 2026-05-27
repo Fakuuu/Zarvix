@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNetwork } from '../context/NetworkContext';
 import Header from '../components/Header';
 import SelectorEmpleado from '../components/SelectorEmpleado';
 import TurnoModal from '../components/TurnoModal';
@@ -470,6 +471,7 @@ function TurnoCard({ turno, scheme, label, isAdmin, onClick }) {
 
 export default function CalendarioPage() {
   const { isAdmin } = useAuth();
+  const { online, syncing, setSyncing } = useNetwork();
 
   const hoyObj  = new Date();
   const HOY_A   = hoyObj.getFullYear();
@@ -529,6 +531,16 @@ export default function CalendarioPage() {
   }, [empleadoId, anyo, mes, reloadKey]);
 
   useEffect(() => { cargarHorarios(); }, [cargarHorarios]);
+
+  // Recarga automática al recuperar la conexión
+  const prevOnline = useRef(online);
+  useEffect(() => {
+    if (online && !prevOnline.current && empleadoId) {
+      cargarHorarios().finally(() => setSyncing(false));
+    }
+    prevOnline.current = online;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [online]);
 
   // ── Navegación por días ──────────────────────────────────────────────────────
 
@@ -785,6 +797,14 @@ export default function CalendarioPage() {
 
       {/* Contenido principal */}
       <main className="flex-1 max-w-lg w-full mx-auto px-4 pt-4 pb-28 flex flex-col gap-3">
+
+        {/* Banner offline */}
+        {!online && (
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5 text-xs text-amber-700">
+            <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+            Sin conexión — mostrando datos guardados
+          </div>
+        )}
 
         {/* Indicador de mes con navegación y toggle de vista */}
         <div className="flex items-center justify-between">
