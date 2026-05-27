@@ -705,4 +705,30 @@ Docker no permite salir del build context con `../`. El contexto era `./backend`
 ### Estado actual del proyecto
 - Vista mensual completamente funcional y verificada con build limpio (85 módulos, 0 errores)
 - La vista diaria existente no ha sido alterada
+
+---
+
+## [2026-05-27] Exportar con rango de fechas personalizado
+
+### Qué se ha implementado
+- Nueva opción "Rango personalizado" en el menú Exportar (junto a "Esta semana" y "Este mes")
+- Nuevo componente `RangoModal` con dos `input[type=date]`:
+  - Fecha inicio (default: lunes de la semana actual)
+  - Fecha fin (default: domingo de la semana actual)
+- Ajuste automático a semanas completas (lunes→domingo): si el usuario elige un miércoles de inicio, se ajusta al lunes; si elige un jueves de fin, se ajusta al domingo
+- Indicador dinámico que muestra el rango ajustado (en amber si se ha modificado, en gris si ya era correcto)
+- Validación: la fecha fin no puede ser anterior al inicio
+- Botón "Generar" con estado de carga: hace fetch de todos los meses del rango (`/api/horarios/:id/:a/:m` por cada mes), fusiona los datos y genera el mensaje
+- Aviso en `ExportModal` si el rango no tiene turnos registrados (texto amber)
+- El formato del mensaje generado es idéntico al existente: semanas con cabecera `*DD/MM-DD/MM*`
+- No existe exportación Excel en la app — solo texto WhatsApp
+
+### Ficheros creados o modificados
+| Fichero | Acción |
+|---|---|
+| `/frontend/src/pages/CalendarioPage.jsx` | Modificado — helpers `lunesDe`, `domingoDe`, `toInputDate`, `parseInputDate`, `generarMensajeRango`, `fetchHorariosRango`; nuevo `RangoModal`; `ExportModal` con prop `advertencia`; nuevo estado `rangoModalAbierto`; `handleRangoGenerado`; tercera opción en menú |
+
+### Estado actual del proyecto
+- Exportación: 3 opciones (semana actual, mes actual, rango personalizado)
+- Build verificado limpio (0 errores, 0 warnings)
 - Docker / Deploy: sin cambios

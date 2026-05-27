@@ -103,9 +103,213 @@ function generarMensajeMes(horarios, anyo, mes) {
   return bloquesSemana(semanas, horarios).join('\n\n');
 }
 
+// ── Helpers rango personalizado ───────────────────────────────────────────────
+
+function lunesDe(fecha) {
+  const d = new Date(fecha); d.setHours(0, 0, 0, 0);
+  const dow = d.getDay();
+  d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+  return d;
+}
+
+function domingoDe(fecha) {
+  const d = new Date(fecha); d.setHours(0, 0, 0, 0);
+  const dow = d.getDay();
+  d.setDate(d.getDate() + (dow === 0 ? 0 : 7 - dow));
+  return d;
+}
+
+function toInputDate(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function parseInputDate(str) {
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0);
+}
+
+function generarMensajeRango(horarios, inicioDate, finDate) {
+  const semanas = [];
+  let lunes = lunesDe(inicioDate);
+  const domingo = domingoDe(finDate);
+  while (lunes <= domingo) {
+    semanas.push(semanaDesdeLunes(lunes));
+    const sig = new Date(lunes);
+    sig.setDate(sig.getDate() + 7);
+    lunes = sig;
+  }
+  return bloquesSemana(semanas, horarios).join('\n\n');
+}
+
+async function fetchHorariosRango(empleadoId, inicioDate, finDate) {
+  const meses = [];
+  const cursor = new Date(inicioDate.getFullYear(), inicioDate.getMonth(), 1);
+  const finMes = new Date(finDate.getFullYear(), finDate.getMonth(), 1);
+  while (cursor <= finMes) {
+    meses.push({ a: cursor.getFullYear(), m: cursor.getMonth() + 1 });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  const resultados = await Promise.all(
+    meses.map(({ a, m }) => client.get(`/api/horarios/${empleadoId}/${a}/${m}`).then((r) => r.data))
+  );
+  const idx = {};
+  resultados.flat().forEach((t) => {
+    const k = String(t.fecha).slice(0, 10);
+    if (!idx[k]) idx[k] = {};
+    idx[k][t.turnoNum] = t;
+  });
+  return idx;
+}
+
+// ── RangoModal ────────────────────────────────────────────────────────────────
+
+function RangoModal({ empleadoId, onGenerar, onClose }) {
+  const hoy = new Date();
+  const [inicio,   setInicio]   = useState(toInputDate(lunesDe(hoy)));
+  const [fin,      setFin]      = useState(toInputDate(domingoDe(hoy)));
+  const [cargando, setCargando] = useState(false);
+  const [error,    setError]    = useState('');
+
+  const inicioDate  = parseInputDate(inicio);
+  const finDate     = parseInputDate(fin);
+  const lunesReal   = lunesDe(inicioDate);
+  const domingoReal = domingoDe(finDate);
+  const invalido    = lunesReal > domingoReal;
+  const ajustado    = toInputDate(inicioDate) !== toInputDate(lunesReal) ||
+                      toInputDate(finDate)    !== toInputDate(domingoReal);
+
+  const fmtDia = (d) => `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+
+  async function handleGenerar() {
+    if (invalido) return;
+    setCargando(true);
+    setError('');
+    try {
+      const hrs = await fetchHorariosRango(empleadoId, lunesReal, domingoReal);
+      const inicioKey = toKey(lunesReal.getFullYear(), lunesReal.getMonth() + 1, lunesReal.getDate());
+      const finKey    = toKey(domingoReal.getFullYear(), domingoReal.getMonth() + 1, domingoReal.getDate());
+      const hayTurnos = Object.entries(hrs).some(
+        ([k, t]) => k >= inicioKey && k <= finKey && Object.keys(t).length > 0
+      );
+      const mensaje = generarMensajeRango(hrs, lunesReal, domingoReal);
+      onGenerar(mensaje, !hayTurnos);
+    } catch {
+      setError('Error al cargar los turnos. Inténtalo de nuevo.');
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl bg-white shadow-xl flex flex-col">
+
+        {/* Cabecera */}
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 shrink-0">
+          <h2 className="text-base font-semibold text-gray-900">Rango personalizado</h2>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            aria-label="Cerrar"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Formulario */}
+        <div className="px-5 py-5 flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Fecha inicio
+            </label>
+            <input
+              type="date"
+              value={inicio}
+              onChange={(e) => setInicio(e.target.value)}
+              className="rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-colors"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Fecha fin
+            </label>
+            <input
+              type="date"
+              value={fin}
+              onChange={(e) => setFin(e.target.value)}
+              className="rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-colors"
+            />
+          </div>
+
+          {/* Info / aviso de ajuste */}
+          {!invalido && (
+            <div className={[
+              'rounded-xl px-3.5 py-2.5 text-xs leading-snug',
+              ajustado
+                ? 'bg-amber-50 border border-amber-200 text-amber-700'
+                : 'bg-gray-50 border border-gray-200 text-gray-500',
+            ].join(' ')}>
+              {ajustado ? (
+                <>
+                  <span className="font-semibold">Ajustado a semanas completas:</span>
+                  {' '}{fmtDia(lunesReal)} → {fmtDia(domingoReal)}
+                </>
+              ) : (
+                <>
+                  Se exportará del{' '}
+                  <span className="font-semibold">{fmtDia(lunesReal)}</span>
+                  {' '}al{' '}
+                  <span className="font-semibold">{fmtDia(domingoReal)}</span>
+                </>
+              )}
+            </div>
+          )}
+
+          {invalido && (
+            <p className="text-xs text-red-500 font-medium">
+              La fecha de fin debe ser igual o posterior a la de inicio.
+            </p>
+          )}
+
+          {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
+        </div>
+
+        {/* Pie */}
+        <div className="px-5 pb-5 pt-1 flex gap-2 justify-end border-t border-gray-100">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleGenerar}
+            disabled={invalido || cargando}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:pointer-events-none transition-colors flex items-center gap-1.5"
+          >
+            {cargando && (
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+            )}
+            {cargando ? 'Cargando…' : 'Generar'}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 // ── ExportModal ───────────────────────────────────────────────────────────────
 
-function ExportModal({ titulo, mensaje, onClose }) {
+function ExportModal({ titulo, mensaje, advertencia, onClose }) {
   const [copiado, setCopiado] = useState(false);
 
   async function copiar() {
@@ -141,7 +345,12 @@ function ExportModal({ titulo, mensaje, onClose }) {
         </div>
 
         {/* Mensaje — desplazable */}
-        <div className="overflow-y-auto flex-1 px-5 py-4">
+        <div className="overflow-y-auto flex-1 px-5 py-4 flex flex-col gap-3">
+          {advertencia && (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-xs text-amber-700 shrink-0">
+              No hay turnos registrados en este rango. El mensaje muestra todos los días como libres.
+            </div>
+          )}
           <pre className="text-sm text-gray-800 bg-gray-50 rounded-xl border border-gray-200 px-4 py-4 whitespace-pre-wrap font-sans leading-relaxed select-all">
             {mensaje}
           </pre>
@@ -260,8 +469,9 @@ export default function CalendarioPage() {
   const [modalAbierto,         setModalAbierto]         = useState(false);
   const [modalEmpleadoAbierto, setModalEmpleadoAbierto] = useState(false);
   const [exportModalAbierto,   setExportModalAbierto]   = useState(false);
-  const [exportData,           setExportData]           = useState({ titulo: '', mensaje: '' });
+  const [exportData,           setExportData]           = useState({ titulo: '', mensaje: '', advertencia: false });
   const [exportMenuAbierto,    setExportMenuAbierto]    = useState(false);
+  const [rangoModalAbierto,    setRangoModalAbierto]    = useState(false);
   const [turnoModal,           setTurnoModal]           = useState({
     fecha: '', turnoNum: 1, turnoExistente: null, turnosDelDia: null,
   });
@@ -365,13 +575,23 @@ export default function CalendarioPage() {
   function handleDelete() { setModalAbierto(false); setReloadKey((k) => k + 1); }
 
   function handleExportar(tipo) {
+    setExportMenuAbierto(false);
+    if (tipo === 'rango') {
+      setRangoModalAbierto(true);
+      return;
+    }
     const titulo  = tipo === 'mes' ? 'Exportar mes' : 'Exportar semana';
     const mensaje = tipo === 'mes'
       ? generarMensajeMes(horarios, anyo, mes)
       : generarMensajeSemana(horarios);
-    setExportData({ titulo, mensaje });
+    setExportData({ titulo, mensaje, advertencia: false });
     setExportModalAbierto(true);
-    setExportMenuAbierto(false);
+  }
+
+  function handleRangoGenerado(mensaje, advertencia) {
+    setRangoModalAbierto(false);
+    setExportData({ titulo: 'Rango personalizado', mensaje, advertencia });
+    setExportModalAbierto(true);
   }
 
   // ── Datos del día ────────────────────────────────────────────────────────────
@@ -443,7 +663,7 @@ export default function CalendarioPage() {
                     className="fixed inset-0 z-10"
                     onClick={() => setExportMenuAbierto(false)}
                   />
-                  <div className="absolute right-0 top-full mt-1 z-20 w-40 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+                  <div className="absolute right-0 top-full mt-1 z-20 w-48 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
                     <button
                       type="button"
                       onClick={() => handleExportar('semana')}
@@ -458,6 +678,14 @@ export default function CalendarioPage() {
                       className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       Este mes
+                    </button>
+                    <div className="border-t border-gray-100" />
+                    <button
+                      type="button"
+                      onClick={() => handleExportar('rango')}
+                      className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Rango personalizado
                     </button>
                   </div>
                 </>
@@ -713,11 +941,21 @@ export default function CalendarioPage() {
         />
       )}
 
+      {/* Modal de rango personalizado */}
+      {rangoModalAbierto && (
+        <RangoModal
+          empleadoId={empleadoId}
+          onGenerar={handleRangoGenerado}
+          onClose={() => setRangoModalAbierto(false)}
+        />
+      )}
+
       {/* Modal de exportar */}
       {exportModalAbierto && (
         <ExportModal
           titulo={exportData.titulo}
           mensaje={exportData.mensaje}
+          advertencia={exportData.advertencia}
           onClose={() => setExportModalAbierto(false)}
         />
       )}
